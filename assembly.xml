@@ -1,0 +1,36 @@
+<assembly
+        xmlns="http://maven.apache.org/plugins/maven-assembly-plugin/assembly/1.1.2"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://maven.apache.org/plugins/maven-assembly-plugin/assembly/1.1.2 http://maven.apache.org/xsd/assembly-1.1.2.xsd
+http://maven.apache.org/plugins/maven-assembly-plugin/assembly/1.1.2 ">
+    <!-- ID 标识，命名随意 -->
+    <id>${project.artifactId}-assembly-${project.version}</id>
+    <!-- 默认为 TRUE, 设为 FALSE, 防止将 ${project.finalName} 作为根目录打进 WAR 包 -->
+    <!-- TRUE  结构: ${project.finalName}.war/${project.finalName}/WEB-INF -->
+    <!-- FALSE 结构: ${project.finalName}.war/WEB-INF -->
+    <includeBaseDirectory>false</includeBaseDirectory>
+    <!-- 设置为 zip 包格式 -->
+    <formats>
+        <format>zip</format>
+    </formats>
+    <fileSets>
+
+        <fileSet>
+            <directory>${project.basedir}/env/${env}</directory>
+            <outputDirectory>/config</outputDirectory>
+        </fileSet>
+
+        <fileSet>
+            <directory>${project.basedir}/script</directory>
+            <outputDirectory>/script</outputDirectory>
+            <!-- / 表示当前项目名称目录下 即 profiledemon 目录下-->
+        </fileSet>
+
+    </fileSets>
+    <!-- 将项目依赖的JAR包输出到 WEB-INF/lib -->
+    <dependencySets>
+        <dependencySet>
+            <outputDirectory>/lib</outputDirectory>
+        </dependencySet>
+    </dependencySets>
+</assembly>
