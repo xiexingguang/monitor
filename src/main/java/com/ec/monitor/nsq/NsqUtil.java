@@ -226,19 +226,147 @@ public class NsqUtil {
 
     }
 
-    public static NsqChannelMonitorBean convertNsqtopicBean2NsqchannelMonitorBean(NsqTopicBean nsqTopicBean) {
-        NsqChannelMonitorBean nsqChannelMonitorBean = null;
-        return nsqChannelMonitorBean;
+    //一个nsqd下的所有topics,转成对应的channelMonitorbean
+    public static List<NsqChannelMonitorBean> convertNsqtopicBean2NsqchannelMonitorBean(List<NsqTopicBean> nsqTopicBeans,String NSQDURL,String lookupurl) {
+
+        List<NsqChannelMonitorBean> nsqChannelMonitorBeanList = null;
+        if (nsqTopicBeans == null) {
+            NsqChannelMonitorBean nsqChannelMonitorBean = new NsqChannelMonitorBean();
+            nsqChannelMonitorBean.setLookuphost(lookupurl);
+            nsqChannelMonitorBean.setNsqdhost(NSQDURL);
+            nsqChannelMonitorBean.setLookupisOk(true);
+            nsqChannelMonitorBean.setNsqdisOk(false);
+            nsqChannelMonitorBeanList.add(nsqChannelMonitorBean);
+            return nsqChannelMonitorBeanList;
+        }
+        for (int i = 0; i < nsqTopicBeans.size(); i++) {
+            NsqTopicBean nsqTopicBean = nsqTopicBeans.get(i);
+            List<NsqChannelBean> nsqChannelBeans = nsqTopicBean.getChannelBeans();
+            NsqChannelMonitorBean nsqChannelMonitorBean = new NsqChannelMonitorBean();
+            nsqChannelMonitorBean.setLookuphost(lookupurl);
+            nsqChannelMonitorBean.setNsqdhost(NSQDURL);
+            if (nsqChannelBeans.size() == 0 || nsqChannelBeans == null) { //说明这个topic下木有channel
+                nsqChannelMonitorBean.setChannelName("");
+                nsqChannelMonitorBean.setBlock_num(nsqTopicBean.getDepth());
+                //  nsqChannelMonitorBean.set
+
+            } else {
+                for (int j = 0; j < nsqChannelBeans.size(); j++) {
+                    NsqChannelBean nsqChannelBean = nsqChannelBeans.get(j);
+                    nsqChannelMonitorBean.setBlock_num(nsqChannelBean.getBlocknum());
+                    nsqChannelMonitorBean.setTimeout_num(nsqChannelBean.getTime_out_count());
+                    nsqChannelMonitorBean.setRequeue_num(nsqChannelBean.setRequeue_count());
+                    nsqChannelMonitorBean.setChannelName(nsqChannelBean.getChannelName());
+                }
+                nsqChannelMonitorBeanList.add(nsqChannelMonitorBean);
+            }
+        }
+
+        return nsqChannelMonitorBeanList;
     }
 
-    public static NsqdMonitorBean convertNsqChannelMontorBean2NsqdMonitorBean(NsqChannelMonitorBean nsqChannelMonitorBean) {
-        NsqdMonitorBean nsqdMonitorBean = null;
-        return nsqdMonitorBean;
+    //将nsqd下的所有channelmonitor转成成NsqdMonitorBean
+    public static List<NsqdMonitorBean> convertNsqTopicBean2NsqdMonitorBean( List<NsqTopicBean> nsqTopicBeans, String lookupurl, String nsqd) {
+        List<NsqdMonitorBean> nsqdMonitorBeans = null;
+        if (nsqTopicBeans == null) { //说明该nsqd下 获取不到该信息，说明该nsqd节点死掉或者网络出现异常
+            NsqdMonitorBean nsqdMonitorBean = new NsqdMonitorBean();
+            nsqdMonitorBean.setNsqdHost(nsqd);
+            nsqdMonitorBean.setLookupisOk(true);
+            //nsqdMonitorBean.setLookupHost(lookupurl);
+            nsqdMonitorBean.setNsqdisOk(false);
+            nsqdMonitorBeans.add(nsqdMonitorBean);
+            return nsqdMonitorBeans;
+        }
+
+        for (int i = 0; i < nsqTopicBeans.size(); i++) {
+            NsqTopicBean nsqTopicBean = nsqTopicBeans.get(i);
+            String topicName = nsqTopicBean.getTopicName();
+            int topicdepth = nsqTopicBean.getDepth();
+            List<NsqChannelBean> nsqChannelBeanList = nsqTopicBean.getChannelBeans();
+            NsqdMonitorBean nsqdMonitorBean = new NsqdMonitorBean();
+            nsqdMonitorBean.setLookupHost(lookupurl);
+            nsqdMonitorBean.setNsqdHost(nsqd);
+            nsqdMonitorBean.setLookupisOk(true);
+            nsqdMonitorBean.setNsqdisOk(true);
+            if (nsqChannelBeanList == null || nsqChannelBeanList.size() == 0) {
+                nsqdMonitorBean.setBlock_num(nsqTopicBean.getDepth()); //如何channel不存在，则将topic下的depth 作为block 数量
+                nsqdMonitorBeans.add(nsqdMonitorBean);
+            } else {
+                int channel_blockMsg = 0 ;
+                int chanel_timeoutMsg = 0 ;
+                int channel_requeueMsg = 0;
+                for (int j = 0; j < nsqChannelBeanList.size(); j++) {
+                    NsqChannelBean nsqChannelBean = nsqChannelBeanList.get(i);
+                    channel_blockMsg = channel_blockMsg + nsqChannelBean.getBlocknum();
+                    chanel_timeoutMsg = chanel_timeoutMsg + nsqChannelBean.getTime_out_count();
+                    channel_requeueMsg = channel_requeueMsg + nsqChannelBean.getRequeue_count();
+                }
+                nsqdMonitorBean.setBlock_num(channel_blockMsg);
+                nsqdMonitorBean.setRequeue_num(channel_requeueMsg);
+                nsqdMonitorBean.setTimeout_num(chanel_timeoutMsg);
+            }//end else
+            nsqdMonitorBeans.add(nsqdMonitorBean);
+        }//
+
+        return nsqdMonitorBeans;
     }
 
-    public static NsqTopicMonitorBean convertNsqdMonitorBean2NsqTopicMonitorBean(NsqdMonitorBean nsqdMonitorBean) {
-        NsqTopicMonitorBean nsqTopicMonitorBean = null;
-        return nsqTopicMonitorBean;
+    //一个lookup 下的监控所有的topic状态
+    public static List<NsqTopicMonitorBean> convertNsqdMonitorBean2NsqTopicMonitorBean(String lookupur) {
+        List<NsqTopicMonitorBean> nsqTopicMonitorBeans = null;
+        List<NsqProducerBean> nsqProducerBeans = NsqUtil.getNsqproducers(lookupur);
+        Map<String, List<NsqdMonitorBean>> topicMap = new HashMap<String, List<NsqdMonitorBean>>();
+        boolean lookupIsOk = false;
+        if (nsqProducerBeans == null) {
+            NsqTopicMonitorBean nsqTopicMonitorBean = new NsqTopicMonitorBean();
+            nsqTopicMonitorBean.setLookupisOk(lookupIsOk);
+            nsqTopicMonitorBeans.add(nsqTopicMonitorBean);
+            return nsqTopicMonitorBeans;
+        }
+        lookupIsOk = true;
+        for (int i = 0; i < nsqProducerBeans.size(); i++) {  //遍历当前集群环境中的nsqd节点
+            NsqProducerBean nsqProducerBean = nsqProducerBeans.get(i);
+            String nsqdurl = nsqProducerBean.getGetNodesStatsUrl();
+            List<NsqTopicBean> topicBeans = NsqUtil.generateNsqdNodeInfoByNsqdUrl(nsqdurl);
+            List<NsqdMonitorBean> nsqdMonitorBeans = NsqUtil.convertNsqTopicBean2NsqdMonitorBean(topicBeans, lookupur, nsqdurl);
+            for (int j = 0; j < nsqdMonitorBeans.size(); j++) {
+                NsqdMonitorBean nsqdMonitorBean = nsqdMonitorBeans.get(i);
+                String topicName = nsqdMonitorBean.getTopicName();
+                if (!topicMap.containsKey(topicName)) {
+                    List<NsqdMonitorBean> nsqdMonitorBeans1 = new ArrayList<NsqdMonitorBean>();
+                    nsqdMonitorBeans1.add(nsqdMonitorBean);
+                    topicMap.put(topicName, nsqdMonitorBeans1);
+                } else {
+                    List<NsqdMonitorBean> nsqdMonitorBeans1 = topicMap.get(topicName);
+                    nsqdMonitorBeans1.add(nsqdMonitorBean);
+                }
+            }
+
+        }//end for
+
+        //解析topicmap 生成nsqtopicbean,
+        for (Map.Entry<String, List<NsqdMonitorBean>> entry : topicMap.entrySet()) {
+            String keyTopic = entry.getKey();
+            List<NsqdMonitorBean> nsqdMonitorBeanList = entry.getValue();
+            //一个topic对应多个来自不同节点的nsqd monitor 即来自不同nsqd 节点
+            NsqTopicMonitorBean nsqTopicMonitorBean = new NsqTopicMonitorBean();
+            nsqTopicMonitorBean.setLookupisOk(lookupIsOk);
+            nsqTopicMonitorBean.setLookuphost(lookupur);
+            int nsqd_blockMsg=0;
+            int nsqd_timeoutMsg = 0;
+            int nsqd_requeue = 0;
+            for (int i = 0; i < nsqdMonitorBeanList.size(); i++) {
+                NsqdMonitorBean nsqdMonitorBean = nsqdMonitorBeanList.get(i);
+                nsqd_blockMsg = nsqd_blockMsg + nsqdMonitorBean.getBlock_num();
+                nsqd_timeoutMsg = nsqd_timeoutMsg + nsqdMonitorBean.getTimeout_num();
+                nsqd_requeue = nsqd_requeue + nsqdMonitorBean.getRequeue_num();
+            }
+            nsqTopicMonitorBean.setBlock_num(nsqd_blockMsg);
+            nsqTopicMonitorBean.setTimeout_num(nsqd_timeoutMsg);
+            nsqTopicMonitorBean.setRequeue_num(nsqd_requeue);
+            nsqTopicMonitorBeans.add(nsqTopicMonitorBean);
+        }//end for map
+        return nsqTopicMonitorBeans;
     }
 
 

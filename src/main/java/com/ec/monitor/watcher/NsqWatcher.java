@@ -5,6 +5,7 @@ import com.ec.monitor.nsq.NsqUtil;
 import com.ec.monitor.properties.NsqwatcherProperties;
 import com.ec.monitor.util.StringUtil;
 import com.ec.watcher.model.RecordView;
+import com.sun.javafx.scene.control.skin.VirtualFlow;
 import org.apache.cxf.transport.TransportURIResolver;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -137,8 +138,35 @@ public class NsqWatcher extends  BaseWatcher{
 
 
 
-    private List<NsqdMonitorBean> generateNsqNodeMonitor( Map<String, List<NsqChannelMonitorBean>> map) {
-      }
+    private  Map<String,List<NsqdMonitorBean>> generateNsqNodeMonitor( Map<String, List<NsqChannelMonitorBean>> map) {
+        List<NsqProducerBean> nsqProducerBeans = null;
+        List<NsqdMonitorBean> nsqdMonitorBeans = null;
+        Map<String, List<NsqdMonitorBean>> nsqmonitmap = null;
+        if (nsqProducerBeans == null) {
+            NsqdMonitorBean nsqdMonitorBean = new NsqdMonitorBean();
+            nsqdMonitorBean.setLookupisOk(false);
+            nsqdMonitorBean.setLookupHost("");
+            nsqdMonitorBeans.add(nsqdMonitorBean);
+            nsqmonitmap.put("lookupurl", nsqdMonitorBeans);
+
+            return nsqmonitmap;
+        }
+
+        for (int i = 0; i < nsqProducerBeans.size(); i++) {
+            String nsqdurl = nsqProducerBeans.get(i).getGetNodesStatsUrl();
+            List<NsqChannelMonitorBean> nsqChannelMonitorBeanList = map.get(nsqdurl);//nsqchannelMonitor不可能为null
+            List<NsqdMonitorBean> nsqdMonitorBeans1 = new ArrayList<NsqdMonitorBean>();
+            for (int j = 0; j < nsqChannelMonitorBeanList.size(); j++) {
+                NsqdMonitorBean nsqdMonitorBean = NsqUtil.convertNsqChannelMontorBean2NsqdMonitorBean()
+            }
+
+        }
+
+
+
+
+
+    }
 
 
     private Map<String, List<NsqChannelMonitorBean>> generateChnnelMonitorByLookupURL(String lookupurl) {
