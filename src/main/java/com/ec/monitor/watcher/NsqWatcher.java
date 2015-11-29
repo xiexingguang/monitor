@@ -14,25 +14,111 @@ import java.util.*;
 
 /**
  * Created by xxg on 2015/11/25.
+ * nsqWatcher类的职责为，nsq各种节点数据的生成，即远程请求lookup,或者nsqdurl，
+ * 获取集群节点状态信息。
  */
 @Component
-public class NsqWatcher extends  BaseWatcher{
+public abstract class NsqWatcher extends  BaseWatcher{
 
-    private static List<NsqProducerBean> nsqProducerBeans = null;
-    private static List<NsqTopicBean> topicBeans = null;
+    private static  Map<String/**lookupURL**/, List<NsqProducerBean>> lookupurlNsqprducerMap = null;
+    private static Map<String/**nsqdURL**/, List<NsqTopicBean>> nsqdTopicInfoMap = null;
+
+    protected static Map<String/**topicName**/, NsqTopicConfig> needMonitorTopicMap = null;
+    protected String needMonitorTopic; //需要监控的topic地址列表
+    protected String lookupurls; // 集群lookup地址，多个用逗号哦隔开
+    protected int defaultMsgThreshold; //默认阻塞的消息数量阀值
+    protected String isMonitorAlltopic; // 是否监控所有topic
+    protected  long nsqMonitorInteval; //监控nsq间隔时间
+    protected int defaulttmeoutMsgThreshold;
+    protected int defaultRequeueMsgThreshold;
+
+    public NsqwatcherProperties getNsqwatcherProperties() {
+        return nsqwatcherProperties;
+    }
+
+    public long getNsqMonitorInteval() {
+        return nsqMonitorInteval;
+    }
+
+    public int getDefaultMsgThreshold() {
+        return defaultMsgThreshold;
+    }
+
+    public String getLookupurls() {
+        return lookupurls;
+    }
+
+    public String getNeedMonitorTopic() {
+        return needMonitorTopic;
+    }
+
+    public static Map<String, List<NsqProducerBean>> getLookupurlNsqprducerMap() {
+        return lookupurlNsqprducerMap;
+    }
+
+    public static Map<String, List<NsqTopicBean>> getNsqdTopicInfoMap() {
+        return nsqdTopicInfoMap;
+    }
+
+    public String getIsMonitorAlltopic() {
+        return isMonitorAlltopic;
+    }
 
     @Autowired
     private NsqwatcherProperties nsqwatcherProperties;
 
+    public NsqWatcher() {
+        nsqMonitorInteval = nsqwatcherProperties.nsqInteval;
+        isMonitorAlltopic = nsqwatcherProperties.monitorAllTopic;
+        defaultMsgThreshold = nsqwatcherProperties.defaultTopicThreshold;
+        defaulttmeoutMsgThreshold = nsqwatcherProperties.defaultTimeoutThreshold;
+        defaultRequeueMsgThreshold = nsqwatcherProperties.defaultRequeThreshold;
+        needMonitorTopic = nsqwatcherProperties.needMonitorTopic;
+        needMonitorTopicMap = NsqUtil.msgTopicThresholdMapping(needMonitorTopic,defaultMsgThreshold,defaulttmeoutMsgThreshold,defaultRequeueMsgThreshold);
+        }
+
+    }
+
+    public static Map<String, NsqTopicConfig> getNeedMonitorTopicMap() {
+        return needMonitorTopicMap;
+    }
+
+
+    public  void init() {
+        lookupurlNsqprducerMap = NsqUtil.getNsqProducersByLOOKupUrls(lookupurls); //发送一次lookupurl请求
+        nsqdTopicInfoMap = NsqUtil.generateNsqdNodesByUrls(lookupurls); //有多少个nsqd节点就发送多少次请求
+    }
+
+    protected Map</**lookupURL**/,List<NsqChannelMonitorBean>> generateNsqChannelMonoitorData() {
+
+
+    }
+
+    protected Map</**lookupURL**/,List<NsqdMonitorBean>> generateNsqdMonoitorData() {
+
+
+    }
+
+    protected Map</**lookupURL**/,List<NsqTopicMonitorBean>> generateNsqTopicData() {
+
+
+    }
 
     @Override
     protected void generatedViewData() {
-        nsqProducerBeans = NsqUtil.getNsqproducers(nsqwatcherProperties.lookupUrl);
+        init();
+        generateNsqTopicViewData();
+        generateNsqdViewData();
+        generateNsqChannelViewData();
+
     }
 
-    public  void init() {
 
-    }
+    protected abstract  Map</**lookupURL**/,List<RecordView>> generateNsqTopicViewData();
+    protected abstract  Map</**lookupURL**/,List<RecordView>> generateNsqdViewData();
+    protected abstract  Map</**lookupURL**/,List<RecordView>> generateNsqChannelViewData();
+
+
 
     private List<RecordView> generateTopicData() {
         //生成以topic为维度的数据，即topic

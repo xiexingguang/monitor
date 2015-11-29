@@ -3,6 +3,7 @@ import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 import com.ec.monitor.bean.*;
+import com.ec.monitor.properties.NsqwatcherProperties;
 import com.ec.monitor.util.StringUtil;
 import com.ec.monitor.util.UrlConnectionUtil;
 import com.ec.watcher.model.DataType;
@@ -10,6 +11,9 @@ import com.ec.watcher.model.ItemView;
 import com.ec.watcher.model.RecordView;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
@@ -21,9 +25,13 @@ import java.util.*;
 /**
  * Created by xxg on 2015/11/26.
  */
+@Component
 public class NsqUtil {
 
     protected final static Logger LOG = LogManager.getLogger(NsqUtil.class);
+
+    @Autowired
+    private NsqwatcherProperties nsqwatcherProperties;
 
     /**
      * 根据lookup地址获取 nsqd 生产者地址
@@ -95,7 +103,11 @@ public class NsqUtil {
      *
      * @return
      */
-    public static Map<String/**LOOKUP URL**/, List<NsqProducerBean>> getNsqProducersByLOOKupUrls(List<String> urls) {
+    public static Map<String/**LOOKUP URL**/, List<NsqProducerBean>> getNsqProducersByLOOKupUrls(String  lookupurls) {
+        if (StringUtil.isNullString(lookupurls)) {
+            throw new IllegalArgumentException("错误的lookupurls 地址" + lookupurls);
+        }
+        List<String> urls = Arrays.asList(lookupurls.split(","));
         Map<String/**LOOKUP URL**/, List<NsqProducerBean>> nsqproduces = new HashMap<String/**LOOKUP URL**/, List<NsqProducerBean>>();
         for (int i = 0; urls != null && i < urls.size(); i++) {
             String url = urls.get(i);
@@ -187,7 +199,11 @@ public class NsqUtil {
     }
 
     //urls，表示多个nsqd的请求地址
-    public  static Map<String, List<NsqTopicBean>> generateNsqdNodesByUrls(List<String> urls) {
+    public  static Map<String, List<NsqTopicBean>> generateNsqdNodesByUrls(String lookupurls) {
+        if (StringUtil.isNullString(lookupurls)) {
+            throw new IllegalArgumentException("错误的lookupurls 地址" + lookupurls);
+        }
+        List<String> urls = Arrays.asList(lookupurls.split(","));
         Map<String, List<NsqTopicBean>> nodes = new HashMap<String, List<NsqTopicBean>>();
         for (int i = 0; i < urls.size(); i++) {
             String key = urls.get(i);
@@ -203,24 +219,56 @@ public class NsqUtil {
 
     public static RecordView generateNormalVew(String lookupUrl, Date date,boolean normal) {
         RecordView recordView = new RecordView();
+        recordView.addItem(new ItemView(DataType.ItemState.IGNORE, sdf.format(date)));
         recordView.addItem(new ItemView(normal==true?DataType.ItemState.OK:DataType.ItemState.WARNING,lookupUrl));
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-        recordView.addItem(new ItemView(DataType.ItemState.IGNORE, sdf.format(date)));
         return recordView;
 
 
     }
 
 
-    public static Map<String/**topicName**/, Integer> msgTopicThresholdMapping(String threshold) {
+    public static Map<String/**topicName**/, NsqTopicConfig> msgTopicThresholdMapping(String threshold,int defautBlock,int defaultTimeout,int defaultRequeue) {
         if (StringUtil.isNullString(threshold)) {
             throw new IllegalStateException("配置的topic阀值参数不存在!");
         }
-        Map<String, Integer> topicMap = new HashMap<String, Integer>();
+        Map<String, NsqTopicConfig> topicMap = new HashMap<String, NsqTopicConfig>();
         String[] topicMapping = threshold.split(",");
         for (String topicThreshold : topicMapping) {
+            NsqTopicConfig nsqTopicConfig = new NsqTopicConfig();
+
             String[] topiscs = topicThreshold.split(":");
-            topicMap.put(topiscs[0], Integer.parseInt(topiscs[1]));
+            String topicName = topiscs[0];
+            int topiscsLength = topiscs.length;
+            int blockThreshold = 0;
+            int timeoutThreshold = 0;
+            int requeueThreshold = 0;
+
+            if (topiscsLength == 1) {  //只写了topicName
+                //使用默认的..
+                 blockThreshold = defautBlock;
+                 timeoutThreshold = defaultTimeout;
+                 requeueThreshold = defaultRequeue;
+            }else if (topiscsLength == 2) {
+                blockThreshold = Integer.parseInt(topiscs[1]);
+                timeoutThreshold = defaultTimeout;
+                requeueThreshold = defaultRequeue;
+
+            }else if (topiscsLength == 3) {
+                blockThreshold = Integer.parseInt(topiscs[1]);
+                timeoutThreshold =  Integer.parseInt(topiscs[2]);
+                requeueThreshold = defaultRequeue;
+            }else if (topiscsLength == 4) {
+                blockThreshold = Integer.parseInt(topiscs[1]);
+                timeoutThreshold = Integer.parseInt(topiscs[2]);
+                requeueThreshold = Integer.parseInt(topiscs[3]);
+            } else {
+                throw new IllegalArgumentException("topic config character too much.." + topicThreshold);
+            }
+            nsqTopicConfig.setBlockMsgThreshold(blockThreshold);
+            nsqTopicConfig.setRequeueMsgThreshold(requeueThreshold);
+            nsqTopicConfig.setTimeoutMsgThreshold(timeoutThreshold);
+            topicMap.put(topicName, nsqTopicConfig);
         }
         return topicMap;
 
@@ -327,7 +375,7 @@ public class NsqUtil {
         for (int i = 0; i < nsqProducerBeans.size(); i++) {  //遍历当前集群环境中的nsqd节点
             NsqProducerBean nsqProducerBean = nsqProducerBeans.get(i);
             String nsqdurl = nsqProducerBean.getGetNodesStatsUrl();
-            List<NsqTopicBean> topicBeans = NsqUtil.generateNsqdNodeInfoByNsqdUrl(nsqdurl);
+            List<NsqTopicBean> topicBeans = NsqUtil.generateNsqdNodeInfoByNsqdUrl(nsqdurl); // 又请求了很多遍
             List<NsqdMonitorBean> nsqdMonitorBeans = NsqUtil.convertNsqTopicBean2NsqdMonitorBean(topicBeans, lookupur, nsqdurl);
             for (int j = 0; j < nsqdMonitorBeans.size(); j++) {
                 NsqdMonitorBean nsqdMonitorBean = nsqdMonitorBeans.get(i);

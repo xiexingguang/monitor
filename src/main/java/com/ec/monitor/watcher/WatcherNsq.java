@@ -58,6 +58,12 @@ public class WatcherNsq extends BaseReportGenerationTask {
         channelView.addField("监控开始时间");
         channelView.addField("lookup-host");
         channelView.addField("nsqd-host");
+        channelView.addField("channel-name");
+        channelView.addField("消息topic");
+        channelView.addField("阻塞消息数量");
+        channelView.addField("超时消息数量");
+        channelView.addField("回退消息数量");
+
 
         return null;
     }

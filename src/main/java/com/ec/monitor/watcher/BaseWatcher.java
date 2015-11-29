@@ -18,7 +18,7 @@ import java.util.concurrent.ScheduledExecutorService;
 public abstract  class BaseWatcher {
 
      //内部维护了所有模块的监控数据，key为模块名称，需要每隔多久扫描该数据结构，定时清理，防止内存撑爆
-    private final static Map<String/*模块名称or reqort名称*/, Map<String/**需要集中显示的数据**/,List<RecordView>>> recordViewsMap =
+    protected final static Map<String/*模块名称or reqort名称*/, Map<String/**需要集中显示的数据**/,List<RecordView>>> recordViewsMap =
               new HashMap<String/*模块名称or reqort名称*/, Map<String,List<RecordView>>>();
 
     private ScheduledExecutorService clean_map = Executors.newSingleThreadScheduledExecutor();
