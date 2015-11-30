@@ -1,61 +1,53 @@
 package com.ec.monitor.watcher;
 
+import com.ec.monitor.properties.Constants;
 import com.ec.watcher.model.RecordView;
 import org.springframework.stereotype.Component;
 
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
 
 /**
  * Created by ecuser on 2015/11/25.
  * watcher　基类，基类维护了recordViewsMap
+ * 所有监控模块公用
  *
  */
 @Component
 public abstract  class BaseWatcher {
 
      //内部维护了所有模块的监控数据，key为模块名称，需要每隔多久扫描该数据结构，定时清理，防止内存撑爆
-    protected final static Map<String/*模块名称or reqort名称*/, Map<String/**需要集中显示的数据**/,List<RecordView>>> recordViewsMap =
+    protected final static Map<String/**模块名称or reqort名称**/, Map<String/**需要集中显示的数据**/,List<RecordView>>> recordViewsMap =
               new HashMap<String/*模块名称or reqort名称*/, Map<String,List<RecordView>>>();
 
-    private ScheduledExecutorService clean_map = Executors.newSingleThreadScheduledExecutor();
-
-
-    public Map<String/*模块名称or reqort名称*/, Map<String/**需要集中显示的数据**/,List<RecordView>>> getRecordViews() {
-        generatedViewData();
-        recordViewsMap.size();
-        return recordViewsMap;
-    }
-
+ //  private ScheduledExecutorService clean_map = Executors.newSingleThreadScheduledExecutor();
 
     /**
-     * //TODO
+     * //TODO定时清理历史数据
      */
     private void cleanHistoryData() {
 
     }
 
+    public static Map<String, Map<String, List<RecordView>>> getRecordViewsMap() {
+        return recordViewsMap;
+    }
 
     /**
      * 添加监控数据
-     * @param key
-     * @param recordView
+     * @param moduleName 模块名称
+     * @param views
      */
-   /* public void add(String key, RecordView recordView) {
-        List<RecordView> recordViews = recordViewsMap.get(key);
-        if(recordViews == null){
-            recordViews = new LinkedList<RecordView>();
-        }else{
-            if(recordViews.size() >=10){
+    protected void addView(String moduleName, Map<String/**需要集中显示的数据，lookupurl**/,List<RecordView>> views) {
+        for (String lookup : views.keySet()) {
+            List<RecordView> recordViews = views.get(lookup);
+            if (recordViews.size() > Constants.protectedOverLoadNum) {  //过载保护，防止撑爆内存
                 recordViews.remove(0);
             }
         }
-        recordViews.add(recordView);
-        recordViewsMap.put(key, recordViews);
-    }*/
+        recordViewsMap.put(moduleName, views);
+    }
     protected abstract void generatedViewData();
 
 }

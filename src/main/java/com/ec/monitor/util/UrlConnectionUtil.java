@@ -35,7 +35,4 @@ public class UrlConnectionUtil {
         return conn;
     }
 
-
-
-
 }
