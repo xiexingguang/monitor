@@ -8,12 +8,14 @@ import com.ec.watcher.task.BaseReportGenerationTask;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
 
 import java.util.*;
 
 /**
  * Created by ecuser on 2015/11/25.
  */
+@Component
 public class WatcherNsq extends BaseReportGenerationTask {
 
     protected final static Logger LOG = LogManager.getLogger(WatcherNsq.class);
@@ -33,7 +35,6 @@ public class WatcherNsq extends BaseReportGenerationTask {
         return null;
     }
 
-
     @Autowired
     private NsqRecordViewGenerateWatcher nsqRecordViewGenerateWatcher;
 
@@ -41,7 +42,7 @@ public class WatcherNsq extends BaseReportGenerationTask {
     //每隔interval 时间执行该方法
     @Override
     protected WatcherView generateWatcherView() {
-        LOG.info("执行generateWatcherView 方法开始...");
+        LOG.info("执行generateWatcherView 方法开始,执行时间为:【"+new Date().toLocaleString()+"】");
         nsqRecordViewGenerateWatcher.generatedViewData(); //生成nsqd 数据
         Map<String/**模块名称or reqort名称**/, Map<String/**需要集中显示的数据**/, List<RecordView>>> recordViewsMap = nsqRecordViewGenerateWatcher.getRecordViewsMap();
         String lookupurls = nsqRecordViewGenerateWatcher.lookupurls;
@@ -61,14 +62,22 @@ public class WatcherNsq extends BaseReportGenerationTask {
             Map<String/**需要集中显示的数据,lookupurl**/, List<RecordView>>
                     topic_records = recordViewsMap.get(nsqRecordViewGenerateWatcher.moduleTopicName);
 
+            if (topic_records == null) {
+                LOG.warn("nsqd dataview  is null,please check.. ");
+            }
+
             for (String lookupurl : urls) {
-                List<RecordView> recordViews = topic_records.get(lookupurl);
-                for (RecordView recordView : recordViews) {
-                    topicDataview.addRecord(recordView);
+                if(topic_records !=null) {
+                    List<RecordView> recordViews = topic_records.get(lookupurl);
+                    for (RecordView recordView : recordViews) {
+                        topicDataview.addRecord(recordView);
+                    }
                 }
             }
+            view_root.addData(topicDataview);
+            LOG.info("success generate dataview of the topic");
         } catch (Throwable e) { //防御性容错
-             LOG.error("fail to generate the  topic monitor data,the exception is:" + e);
+             LOG.error("fail to generate the  topic dataview  data,the exception is:", e);
         }
 
         try {
@@ -83,15 +92,22 @@ public class WatcherNsq extends BaseReportGenerationTask {
 
             Map<String/**需要集中显示的数据,lookupurl**/, List<RecordView>>
                     nsqd_topic = recordViewsMap.get(nsqRecordViewGenerateWatcher.moduleNsqdName);
+            if (nsqd_topic == null) {
+                LOG.warn("nsqd dataview  is null,please check.. ");
+            }
 
             for (String lookupurl : urls) {
-                List<RecordView> recordViews = nsqd_topic.get(lookupurl);
-                for (RecordView recordView : recordViews) {
-                    nsqdNodeView.addRecord(recordView);
+                if(nsqd_topic != null){
+                    List<RecordView> recordViews = nsqd_topic.get(lookupurl);
+                    for (RecordView recordView : recordViews) {
+                        nsqdNodeView.addRecord(recordView);
+                    }
                 }
             }
+            view_root.addData(nsqdNodeView);
+            LOG.info("success generate dataview of the nsqd");
         } catch (Throwable e) {
-            LOG.error("fail to generate the  nsqd monitor data,the exception is:" + e);
+            LOG.error("fail to generate the  nsqd dataview data,the exception is:",e);
         }
 
 
@@ -109,16 +125,24 @@ public class WatcherNsq extends BaseReportGenerationTask {
             Map<String/**需要集中显示的数据,lookupurl**/, List<RecordView>>
                     channel_topic = recordViewsMap.get(nsqRecordViewGenerateWatcher.moduleChannelName);
 
+            if (channel_topic == null) {
+                LOG.warn("channel dataview  is null,please check.. ");
+            }
+
             for (String lookupurl : urls) {
-                List<RecordView> recordViews = channel_topic.get(lookupurl);
-                for (RecordView recordView : recordViews) {
-                    channelView.addRecord(recordView);
+                if(channel_topic != null) {
+                    List<RecordView> recordViews = channel_topic.get(lookupurl);
+                    for (RecordView recordView : recordViews) {
+                        channelView.addRecord(recordView);
+                    }
                 }
             }
+            view_root.addData(channelView);
+            LOG.info("success generate dataview of the channel");
         } catch (Throwable e) {
-            LOG.error("fail to generate the  channel monitor data,the exception is:" + e);
+            LOG.error("fail to generate the  channel dataview  data,the exception is:", e);
         }
 
-        return null;
+        return view_root;
     }
 }

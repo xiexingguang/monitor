@@ -10,6 +10,7 @@ import com.ec.watcher.model.RecordView;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.stereotype.Component;
+
 import java.util.*;
 
 /**
@@ -20,7 +21,6 @@ public class NsqRecordViewGenerateWatcher extends  NsqWatcher {
 
     protected final static Logger LOG = LogManager.getLogger(NsqUtil.class);
     protected Map<String/**topicName**/, NsqTopicConfig> needMonitorTopicMap = getNeedMonitorTopicMap();
-
 
     /**
      * 生成topic模块显示view数据
@@ -37,10 +37,10 @@ public class NsqRecordViewGenerateWatcher extends  NsqWatcher {
                 map1.put(lookupurl, topicViews);
             }
             addView(moduleTopicName, map1);
+            LOG.info("success generate the topic  view data.");
         } catch (Exception e) {
-            LOG.error("fail to generate the topic view data ,the exception is ===== "+e);
+            LOG.error("fail to generate the topic view data ,the exception : ", e);
         }
-        LOG.info("success generate the topic view data.");
     }
     @Override
     protected  void generateNsqdViewData() {
@@ -54,10 +54,10 @@ public class NsqRecordViewGenerateWatcher extends  NsqWatcher {
                 map1.put(lookupurl, nsqdViews);
             }
             addView(moduleNsqdName, map1);
+            LOG.info("success generate the nsqd view  data.");
         } catch (Exception e) {
-            LOG.error("fail to generate the nsqd view data ,the exception is ===== "+e);
+            LOG.error("fail to generate the nsqd view  ,the exception :",e);
         }
-        LOG.info("success generate the nsqd view data.");
     }
     @Override
     protected void  generateNsqChannelViewData() {
@@ -71,28 +71,43 @@ public class NsqRecordViewGenerateWatcher extends  NsqWatcher {
                 map1.put(lookupurl, channelRecordViews);
             }
             addView(moduleChannelName, map1);
+            LOG.info("success generate the channel  data.");
         } catch (Exception e) {
-            LOG.error("fail to generate the channel view data ,the exception is ===== "+e);
+          //  e.printStackTrace();
+            LOG.error("fail to generate the channel  data ,the exception : ",e);
         }
-        LOG.info("success generate the channel data.");
     }
 
 
-    /**
+    /**针对一个集群环境
      * 将NsqChannelMonitorBean ---> recordView数据方便在图表上显示
      * @param nsqChannelMonitorBeans
      * @return
      */
     private List<RecordView> convertNsqChannelMonoitorData2ReocrdView(List<NsqChannelMonitorBean> nsqChannelMonitorBeans) {
+        Map<String/**topicName**/, NsqTopicConfig> needMonitorTopicMap = getNeedMonitorTopicMap();
         List<RecordView> recordViews = new ArrayList<RecordView>();
         for (int i = 0; i < nsqChannelMonitorBeans.size(); i++) {
             NsqChannelMonitorBean nsqChannelMonitorBean = nsqChannelMonitorBeans.get(i);
             String lookupurl = nsqChannelMonitorBean.getLookuphost();
             String nsqdHost = nsqChannelMonitorBean.getNsqdhost();
             String topicName = nsqChannelMonitorBean.getTopicName();
-            if(!needMonitorTopicMap.containsKey(topicName) && isMonitorAlltopic.equalsIgnoreCase("no")){  //过滤
-                continue;
+            NsqTopicConfig config = null;
+
+            // 检测topic 是否需要监控
+            if (isMonitorAlltopic.equalsIgnoreCase("yes") || needMonitorTopicMap == null) { // 监控集群环境中
+                config = new NsqTopicConfig();
+                config.setBlockMsgThreshold(defaultMsgThreshold);
+                config.setRequeueMsgThreshold(defaultRequeueMsgThreshold);
+                config.setTimeoutMsgThreshold(defaulttmeoutMsgThreshold);
+            }else if (isMonitorAlltopic.equalsIgnoreCase("no")) {  // 通过配置决定监控哪些topic
+                config = needMonitorTopicMap.get(topicName);
+                if (config == null) { //说明topic 该topic 不在监控列表里面，则connitue
+                    LOG.info("该 topicName　【"+topicName+"】不需要监控");
+                    continue;
+                }
             }
+
             String channelName = nsqChannelMonitorBean.getChannelName();
             boolean lookupisok = nsqChannelMonitorBean.isLookupisOk();
             boolean nsqdisok = nsqChannelMonitorBean.isNsqdisOk();
@@ -117,15 +132,29 @@ public class NsqRecordViewGenerateWatcher extends  NsqWatcher {
      * @return
      */
     private List<RecordView> convertNsqdMonitorData2RecordView(List<NsqdMonitorBean> nsqdMonitorBeanList) {
+        Map<String/**topicName**/, NsqTopicConfig> needMonitorTopicMap = getNeedMonitorTopicMap();
         List<RecordView> recordViews = new ArrayList<RecordView>();
         for (int i = 0; i < nsqdMonitorBeanList.size(); i++) {
             NsqdMonitorBean nsqdMonitorBean = nsqdMonitorBeanList.get(i);
             String lookupurl = nsqdMonitorBean.getLookupHost();
             String nsqdhost = nsqdMonitorBean.getNsqdHost();
             String topicName = nsqdMonitorBean.getTopicName();
-            if(!needMonitorTopicMap.containsKey(topicName) && isMonitorAlltopic.equalsIgnoreCase("no")){  //过滤
-                continue;
+            NsqTopicConfig config = null;
+
+            // 检测topic 是否需要监控
+            if (isMonitorAlltopic.equalsIgnoreCase("yes") || needMonitorTopicMap == null) { // 监控集群环境中
+                config = new NsqTopicConfig();
+                config.setBlockMsgThreshold(defaultMsgThreshold);
+                config.setRequeueMsgThreshold(defaultRequeueMsgThreshold);
+                config.setTimeoutMsgThreshold(defaulttmeoutMsgThreshold);
+            }else if (isMonitorAlltopic.equalsIgnoreCase("no")) {  // 通过配置决定监控哪些topic
+                config = needMonitorTopicMap.get(topicName);
+                if (config == null) { //说明topic 该topic 不在监控列表里面，则connitue
+                    LOG.info("该 topicName　【"+topicName+"】不需要监控");
+                    continue;
+                }
             }
+
             boolean nsqdisok = nsqdMonitorBean.isNsqdisOk();
             boolean nsqlookupisok = nsqdMonitorBean.isLookupisOk();
             int blockNum = nsqdMonitorBean.getBlock_num();
@@ -148,19 +177,33 @@ public class NsqRecordViewGenerateWatcher extends  NsqWatcher {
      * @return
      */
     private List<RecordView> convertNsqTopicMonitorData2RecordView(List<NsqTopicMonitorBean> nsqTopicMonitorBeans) {
+         Map<String/**topicName**/, NsqTopicConfig> needMonitorTopicMap = getNeedMonitorTopicMap();
         List<RecordView> recordViews = new ArrayList<RecordView>();
         for (int i = 0; i < nsqTopicMonitorBeans.size(); i++) {
             NsqTopicMonitorBean nsqTopicMonitorBean = nsqTopicMonitorBeans.get(i);
             String lookupurl = nsqTopicMonitorBean.getLookuphost();
             boolean nsqlookupisok = nsqTopicMonitorBean.isLookupisOk();
             String topicName = nsqTopicMonitorBean.getTopicName();
-            if(!needMonitorTopicMap.containsKey(topicName) && isMonitorAlltopic.equalsIgnoreCase("no")){  //过滤
-                continue;
+            NsqTopicConfig config = null;
+
+            // 检测topic 是否需要监控
+            if (isMonitorAlltopic.equalsIgnoreCase("yes") || needMonitorTopicMap == null) { // 监控集群环境中
+                config = new NsqTopicConfig();
+                config.setBlockMsgThreshold(defaultMsgThreshold);
+                config.setRequeueMsgThreshold(defaultRequeueMsgThreshold);
+                config.setTimeoutMsgThreshold(defaulttmeoutMsgThreshold);
+            }else if (isMonitorAlltopic.equalsIgnoreCase("no")) {  // 通过配置决定监控哪些topic
+                config = needMonitorTopicMap.get(topicName);
+                if (config == null) { //说明topic 该topic 不在监控列表里面，则connitue
+                    LOG.info("该 topicName　【"+topicName+"】不需要监控");
+                    continue;
+                }
             }
+
             int blockNum = nsqTopicMonitorBean.getBlock_num();
             int timeoutNum = nsqTopicMonitorBean.getTimeout_num();
             int requeueNum = nsqTopicMonitorBean.getRequeue_num();
-            NsqTopicConfig config = needMonitorTopicMap.get(topicName);
+
             RecordView recordView = NsqUtil.generateNormalVew(lookupurl, new Date(), nsqlookupisok);
             recordView.addItem(new ItemView(DataType.ItemState.IGNORE,topicName));
             recordView.addItem(new ItemView(blockNum>config.getBlockMsgThreshold()?DataType.ItemState.WARNING:DataType.ItemState.OK,blockNum+""));

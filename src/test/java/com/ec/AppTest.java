@@ -33,6 +33,6 @@ public class AppTest
      */
     public void testApp()
     {
-        assertTrue( true );
+        System.out.println("hello world \n 你好");
     }
 }

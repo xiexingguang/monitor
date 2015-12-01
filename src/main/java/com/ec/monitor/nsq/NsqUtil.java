@@ -40,6 +40,10 @@ public class NsqUtil {
      */
     public static List<NsqProducerBean> getNsqproducers(String url) {
         LOG.info("获取lookup 所有nsqd 节点信息开始====》请求url为:"+url);
+        if (!url.startsWith("http://")) {
+            url = "http://" + url;
+        }
+        url = url + "/nodes";
         InputStream inputStream = null;
         HttpURLConnection connection = null;
         BufferedReader bufferedReader = null;
@@ -91,7 +95,7 @@ public class NsqUtil {
                 bufferedReader = null;
             }*/
         }
-        LOG.debug("获取nsqd节点信息完成，所有nsqd 信息为===》" + JSONObject.toJSONString(nsqProducerBeans));
+        LOG.info("获取nsqd节点信息完成，所有nsqd 信息为===》" + JSONObject.toJSONString(nsqProducerBeans));
         return nsqProducerBeans;
     }
 
@@ -130,7 +134,7 @@ public class NsqUtil {
         if (!url.startsWith("http://")) {
             url = "http://" + url;
         }
-        String requestUrl = url + "?format=json";
+        String requestUrl = url + "/stats?format=json";
         List<NsqTopicBean> nsqTopicBeanList = null;
 
         try {
@@ -188,10 +192,10 @@ public class NsqUtil {
 
                 }//end while
             }
-        } catch (IOException e) {
+        } catch (Exception e) {
             LOG.warn("获取nsqd节点topic 相关信息出现异常，异常出现的nsqd url为" + requestUrl,e);
         }
-        LOG.debug("获取nsqd节点topic 相关信息结束，信息为===》" + JSONObject.toJSONString(nsqTopicBeanList));
+        LOG.info("获取nsqd节点topic 相关信息结束，信息为===》" + JSONObject.toJSONString(nsqTopicBeanList));
         return nsqTopicBeanList;
     }
 
@@ -210,12 +214,13 @@ public class NsqUtil {
             if (producer != null) {
                 map = new HashMap<>();
                 for (int i = 0; i < producer.size(); i++) {
-                    List<NsqTopicBean> topicBeans = generateNsqdNodeInfoByNsqdUrl(producer.get(i).getGetNodesStatsUrl());
+                    List<NsqTopicBean> topicBeans = generateNsqdNodeInfoByNsqdUrl(producer.get(i).getHost());
                     map.put(producer.get(i).getHost(), topicBeans);
                 }
             }
             map0.put(lookupurl, map);
         }
+        LOG.info("the cluster of the nsq  topic info:"+JSONObject.toJSONString(map0));
         return map0;
     }
 
@@ -237,17 +242,22 @@ public class NsqUtil {
 
     /**
      *  根据配置文件，生成topic的配置信息比如topic的阻塞消息阀值，超时消息阀值等
+     *  为了简单起见，不对topic进行去重校验，以及其他校验是否为真正的topic，出异常直接初始化失败
+     *
      * @param threshold
      * @param defautBlock
      * @param defaultTimeout
      * @param defaultRequeue
-     * @return
+     * @return  if is null ,it means monitor all topics of the lookup
      */
     public static Map<String/**topicName**/, NsqTopicConfig> msgTopicThresholdMapping(String threshold,int defautBlock,int defaultTimeout,int defaultRequeue) {
+
+        Map<String, NsqTopicConfig> topicMap = null;
         if (StringUtil.isNullString(threshold)) {
-            throw new IllegalStateException("配置的topic阀值参数不存在!");
+          LOG.warn("the config nsq of the topic  param is null,it means is monitor all topic ");
+            return topicMap;
         }
-        Map<String, NsqTopicConfig> topicMap = new HashMap<String, NsqTopicConfig>();
+        topicMap = new HashMap<String, NsqTopicConfig>();
         String[] topicMapping = threshold.split(",");
         for (String topicThreshold : topicMapping) {
             NsqTopicConfig nsqTopicConfig = new NsqTopicConfig();
@@ -261,19 +271,19 @@ public class NsqUtil {
 
             if (topiscsLength == 1) {  //只写了topicName
                 //使用默认的..
-                 blockThreshold = defautBlock;
-                 timeoutThreshold = defaultTimeout;
-                 requeueThreshold = defaultRequeue;
-            }else if (topiscsLength == 2) {
+                blockThreshold = defautBlock;
+                timeoutThreshold = defaultTimeout;
+                requeueThreshold = defaultRequeue;
+            } else if (topiscsLength == 2) {
                 blockThreshold = Integer.parseInt(topiscs[1]);
                 timeoutThreshold = defaultTimeout;
                 requeueThreshold = defaultRequeue;
 
-            }else if (topiscsLength == 3) {
+            } else if (topiscsLength == 3) {
                 blockThreshold = Integer.parseInt(topiscs[1]);
-                timeoutThreshold =  Integer.parseInt(topiscs[2]);
+                timeoutThreshold = Integer.parseInt(topiscs[2]);
                 requeueThreshold = defaultRequeue;
-            }else if (topiscsLength == 4) {
+            } else if (topiscsLength == 4) {
                 blockThreshold = Integer.parseInt(topiscs[1]);
                 timeoutThreshold = Integer.parseInt(topiscs[2]);
                 requeueThreshold = Integer.parseInt(topiscs[3]);
@@ -285,6 +295,7 @@ public class NsqUtil {
             nsqTopicConfig.setTimeoutMsgThreshold(timeoutThreshold);
             topicMap.put(topicName, nsqTopicConfig);
         }
+        LOG.info("the nsq of the topic config info:" + JSONObject.toJSONString(topicMap));
         return topicMap;
 
     }
@@ -298,7 +309,7 @@ public class NsqUtil {
      */
     public static List<NsqChannelMonitorBean> convertNsqtopicBean2NsqchannelMonitorBean(List<NsqTopicBean> nsqTopicBeans,String NSQDURL,String lookupurl) {
 
-        List<NsqChannelMonitorBean> nsqChannelMonitorBeanList = new ArrayList<NsqChannelMonitorBean>();
+        List<NsqChannelMonitorBean> nsqChannelMonitorBeanList =  new ArrayList<>();
 
         if (nsqTopicBeans == null) {
             NsqChannelMonitorBean nsqChannelMonitorBean = new NsqChannelMonitorBean();
@@ -329,19 +340,20 @@ public class NsqUtil {
                 nsqChannelMonitorBeanList.add(nsqChannelMonitorBean);
             }
         }
-
+        LOG.info("before convert the topic info is :" + JSONObject.toJSONString(nsqTopicBeans));
+        LOG.info("after convert the nsqchannel info is :" + JSONObject.toJSONString(nsqChannelMonitorBeanList));
         return nsqChannelMonitorBeanList;
     }
 
     /**
-     * //将nsqd下的所有topic 转成nsqdMonitor数据接收
+     * //针对每一个nsqdurl 来讲将nsqd下的所有topic 转成nsqdMonitor数据接收
      * @param nsqTopicBeans
      * @param lookupurl
      * @param nsqd
      * @return
      */
     public static List<NsqdMonitorBean> convertNsqTopicBean2NsqdMonitorBean( List<NsqTopicBean> nsqTopicBeans, String lookupurl, String nsqd) {
-        List<NsqdMonitorBean> nsqdMonitorBeans = null;
+        List<NsqdMonitorBean> nsqdMonitorBeans = new ArrayList<>();
         if (nsqTopicBeans == null) { //说明该nsqd下 获取不到该信息，说明该nsqd节点死掉或者网络出现异常
             NsqdMonitorBean nsqdMonitorBean = new NsqdMonitorBean();
             nsqdMonitorBean.setNsqdHost(nsqd);
@@ -362,15 +374,16 @@ public class NsqUtil {
             nsqdMonitorBean.setNsqdHost(nsqd);
             nsqdMonitorBean.setLookupisOk(true);
             nsqdMonitorBean.setNsqdisOk(true);
+            nsqdMonitorBean.setTopicName(topicName);
             if (nsqChannelBeanList == null || nsqChannelBeanList.size() == 0) {
                 nsqdMonitorBean.setBlock_num(nsqTopicBean.getDepth()); //如何channel不存在，则将topic下的depth 作为block 数量
-                nsqdMonitorBeans.add(nsqdMonitorBean);
+              //  nsqdMonitorBeans.add(nsqdMonitorBean);
             } else {
                 int channel_blockMsg = 0 ;
                 int chanel_timeoutMsg = 0 ;
                 int channel_requeueMsg = 0;
                 for (int j = 0; j < nsqChannelBeanList.size(); j++) {
-                    NsqChannelBean nsqChannelBean = nsqChannelBeanList.get(i);
+                    NsqChannelBean nsqChannelBean = nsqChannelBeanList.get(j);
                     channel_blockMsg = channel_blockMsg + nsqChannelBean.getBlocknum();
                     chanel_timeoutMsg = chanel_timeoutMsg + nsqChannelBean.getTime_out_count();
                     channel_requeueMsg = channel_requeueMsg + nsqChannelBean.getRequeue_count();
@@ -381,14 +394,18 @@ public class NsqUtil {
             }//end else
             nsqdMonitorBeans.add(nsqdMonitorBean);
         }//
-
+        if (nsqTopicBeans.size() != nsqdMonitorBeans.size()) {
+            LOG.warn("convert nsq topic to nsqd ,the each of size is not equal, the nsq topic size is 【"+nsqTopicBeans.size()+"】,the nsqd  size is【"+nsqdMonitorBeans.size()+"】");
+        }
+        LOG.info("before convert the topic info is :"+JSONObject.toJSONString(nsqTopicBeans));
+        LOG.info("after convert the nsqd info is :"+JSONObject.toJSONString(nsqdMonitorBeans));
         return nsqdMonitorBeans;
     }
 
     //一个lookup 下的监控所有的topic状态
     public static List<NsqTopicMonitorBean> convertTopic2NsqTopicMonitorBean(String lookupurl, Map<String/**nsqdURL**/, List<NsqTopicBean>> topics) {
 
-        List<NsqTopicMonitorBean> nsqTopicMonitorBeans = null;
+        List<NsqTopicMonitorBean> nsqTopicMonitorBeans = new ArrayList<>();
 
         if (topics == null) {
             NsqTopicMonitorBean nsqTopicMonitorBean = new NsqTopicMonitorBean();
@@ -421,13 +438,15 @@ public class NsqUtil {
             }
         }
 
+         LOG.info("the topic of the nsqd relationship is :"+JSONObject.toJSONString(topicMap));
         //解析topicMap，封装成topicMonitorBean
         for (String topicName /**topic的名称**/: topicMap.keySet()) {
             List<NsqdMonitorBean> nsqdMonitorBeanList = topicMap.get(topicName);
             NsqTopicMonitorBean nsqTopicMonitorBean = new NsqTopicMonitorBean();
             nsqTopicMonitorBean.setLookupisOk(true);
+            nsqTopicMonitorBean.setTopicName(topicName);
             nsqTopicMonitorBean.setLookuphost(lookupurl);
-            int nsqd_blockMsg=0;
+            int nsqd_blockMsg = 0;
             int nsqd_timeoutMsg = 0;
             int nsqd_requeue = 0;
             for (int i = 0; i < nsqdMonitorBeanList.size(); i++) {
@@ -440,9 +459,11 @@ public class NsqUtil {
             nsqTopicMonitorBean.setTimeout_num(nsqd_timeoutMsg);
             nsqTopicMonitorBean.setRequeue_num(nsqd_requeue);
             nsqTopicMonitorBeans.add(nsqTopicMonitorBean);
-        //end for map
+            //end for map
 
         }
+        LOG.info("before convert the single cluster of the topic info is :" + JSONObject.toJSONString(topics));
+        LOG.info("after convert the nsq topic  info is :" + JSONObject.toJSONString(nsqTopicMonitorBeans));
         return nsqTopicMonitorBeans;
     }
 

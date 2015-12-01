@@ -13,7 +13,9 @@
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
       <spring.version>4.1.6.RELEASE</spring.version>
+      <ec.common.version>0.0.2-SNAPSHOT</ec.common.version>
   </properties>
+
 
   <dependencies>
     <dependency>
@@ -22,6 +24,19 @@
       <version>3.8.1</version>
       <scope>test</scope>
     </dependency>
+
+      <dependency>
+          <groupId>com.ec</groupId>
+          <artifactId>ec-commons</artifactId>
+          <version>${ec.common.version}</version>
+      </dependency>
+
+      <dependency>
+          <groupId>org.eclipse.jetty</groupId>
+          <artifactId>jetty-server</artifactId>
+          <version>9.3.0.M2</version>
+      </dependency>
+
 
       <!-- springframework -->
       <dependency>

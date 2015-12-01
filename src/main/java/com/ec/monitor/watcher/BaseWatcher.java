@@ -2,7 +2,6 @@ package com.ec.monitor.watcher;
 
 import com.ec.monitor.properties.Constants;
 import com.ec.watcher.model.RecordView;
-import org.springframework.stereotype.Component;
 
 import java.util.HashMap;
 import java.util.List;
@@ -14,7 +13,6 @@ import java.util.Map;
  * 所有监控模块公用
  *
  */
-@Component
 public abstract  class BaseWatcher {
 
      //内部维护了所有模块的监控数据，key为模块名称，需要每隔多久扫描该数据结构，定时清理，防止内存撑爆

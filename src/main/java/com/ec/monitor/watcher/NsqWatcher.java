@@ -7,8 +7,8 @@ import com.ec.monitor.properties.NsqwatcherProperties;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Component;
 
+import javax.annotation.PostConstruct;
 import java.util.*;
 
 /**
@@ -16,13 +16,13 @@ import java.util.*;
  * nsqWatcher类的职责为，nsq各种节点数据的生成，即远程请求lookup,或者nsqdurl，
  * 获取集群节点状态信息。
  */
-@Component
-public abstract class NsqWatcher extends  BaseWatcher{
+
+public  class NsqWatcher extends  BaseWatcher{
 
     protected final static Logger LOG = LogManager.getLogger(NsqWatcher.class);
     private static  Map<String/**lookupURL**/, List<NsqProducerBean>> lookupurlNsqprducerMap = null;
     private static Map<String /**lookupurl**/, Map<String/**nsqdURL**/, List<NsqTopicBean>>> nsqdTopicInfoMap = null;
-    protected static Map<String/**topicName**/, NsqTopicConfig> needMonitorTopicMap = null;
+    protected  static Map<String/**topicName**/, NsqTopicConfig> needMonitorTopicMap = null;  //现在只针对一个集群环境配置
     protected String needMonitorTopic; //需要监控的topic地址列表
     protected String lookupurls; // 集群lookup地址，多个用逗号哦隔开
     protected int defaultMsgThreshold; //默认阻塞的消息数量阀值
@@ -37,8 +37,10 @@ public abstract class NsqWatcher extends  BaseWatcher{
     @Autowired
     private NsqwatcherProperties nsqwatcherProperties;
 
-    public NsqWatcher() {
-        LOG.info("NSQ 监控 数据环境初始化.....");
+    @PostConstruct
+    public void start() {
+
+        LOG.info(" =====NSQ 监控 数据环境初始化=====");
         moduleTopicName = Constants.MOUDULE_TOPIC_NAME;
         moduleNsqdName = Constants.MOUDULE_NSQD_NAME;
         moduleChannelName = Constants.MOUDULE_CHANNEL_NAME;
@@ -49,13 +51,33 @@ public abstract class NsqWatcher extends  BaseWatcher{
         defaulttmeoutMsgThreshold = nsqwatcherProperties.defaultTimeoutThreshold;
         defaultRequeueMsgThreshold = nsqwatcherProperties.defaultRequeThreshold;
         needMonitorTopic = nsqwatcherProperties.needMonitorTopic;
-        needMonitorTopicMap = NsqUtil.msgTopicThresholdMapping(needMonitorTopic, defaultMsgThreshold, defaulttmeoutMsgThreshold, defaultRequeueMsgThreshold);
+
+        try {
+            needMonitorTopicMap = NsqUtil.msgTopicThresholdMapping(needMonitorTopic, defaultMsgThreshold, defaulttmeoutMsgThreshold, defaultRequeueMsgThreshold);
+        } catch (Exception e) {
+            if (isMonitorAlltopic.equalsIgnoreCase("yes")) {
+                LOG.warn("fail to init the need of the topic config ");
+            } else {
+                throw new RuntimeException("fail to init the config of the nsq topic ,the exception is :", e);
+            }
+        }
+       LOG.info("nsq 监控初始化数据环境完成==={\n"+"监控集群地址:"+ lookupurls
+                                                                         +"\n 监控间隔时间:"+ nsqMonitorInteval +" millseconds"
+                                                                          +"\n是否全量topic监控:"+ isMonitorAlltopic
+                                                                          +"\n 默认阻塞消息阀值:"+ defaultMsgThreshold
+                                                                          +"\n 默认超时消息阀值:"+  defaulttmeoutMsgThreshold
+                                                                          +"\n默认requeue阀值" +  defaultRequeueMsgThreshold+"\n}");
     }
 
     public  void init() {
-        LOG.info("监控整个nsq集群，环境请求，》》》》》》》》》》》》》》》 开始调用nsqd接口地址");
+        LOG.info(" 初始化数据后, 开始调用nsqd接口地址");
         lookupurlNsqprducerMap = NsqUtil.getNsqProducersByLOOKupUrls(lookupurls); //有多少个集群环境就发送多少次请求
         nsqdTopicInfoMap = NsqUtil.getClusterTopic(lookupurlNsqprducerMap);
+        checkNsqTopicConfig();
+    }
+
+    private void checkNsqTopicConfig() {
+         //TODO 检测 配置文件topic 是否在集群环境中
     }
 
 
@@ -117,33 +139,40 @@ public abstract class NsqWatcher extends  BaseWatcher{
 
     @Override
     protected void generatedViewData() {
-        LOG.info("begin generate the view data");
+        LOG.info("begin generate the view data ,excute by 【NsqWatcher】");
         init();
         generateNsqTopicViewData();
         generateNsqdViewData();
         generateNsqChannelViewData();
-        LOG.info("end the  generate the view data");
     }
 
     /**
      * 将生成好的monitor数据----》recordView----->入底层map 存储
      */
-    protected abstract  void  generateNsqTopicViewData();
+    protected   void  generateNsqTopicViewData(){
 
-    protected abstract  void generateNsqdViewData();
+    }
 
-    protected abstract  void generateNsqChannelViewData();
+
+
+    protected   void generateNsqdViewData(){
+
+    }
+
+    protected   void generateNsqChannelViewData() {
+
+    }
 
 
     public NsqwatcherProperties getNsqwatcherProperties() {
         return nsqwatcherProperties;
     }
 
-    public static Map<String, Map<String, List<NsqTopicBean>>> getNsqdTopicInfoMap() {
+    public  Map<String, Map<String, List<NsqTopicBean>>> getNsqdTopicInfoMap() {
         return nsqdTopicInfoMap;
     }
 
-    public static Map<String, NsqTopicConfig> getNeedMonitorTopicMap() {
+    public  Map<String, NsqTopicConfig> getNeedMonitorTopicMap() {
         return needMonitorTopicMap;
     }
 

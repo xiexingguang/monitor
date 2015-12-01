@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:tx="http://www.springframework.org/schema/tx" xmlns:jdbc="http://www.springframework.org/schema/jdbc"
+	xsi:schemaLocation="
+        http://www.springframework.org/schema/beans
+        http://www.springframework.org/schema/beans/spring-beans.xsd
+        http://www.springframework.org/schema/context
+        http://www.springframework.org/schema/context/spring-context.xsd
+        http://www.springframework.org/schema/tx
+        http://www.springframework.org/schema/tx/spring-tx-3.0.xsd">
+
+	<context:annotation-config />
+	<!-- 开启事务注解驱动 -->  
+    <tx:annotation-driven />
+    <!--suppress SpringModelInspection -->
+    <context:component-scan base-package="com.ec.commons.server.jetty*" />
+    <!--suppress SpringModelInspection -->
+    <context:component-scan base-package="com.ec.monitor.nsq*" />
+    <!--suppress SpringModelInspection -->
+    <context:component-scan base-package="com.ec.monitor.watcher*" />
+    <!--suppress SpringModelInspection -->
+    <context:component-scan base-package="com.ec.watcher.jetty.handler*" />
+    <!--suppress SpringModelInspection -->
+    <context:component-scan base-package="com.ec.watcher.task*" />
+    <import resource="applicationContext-commons.xml" />
+</beans>
