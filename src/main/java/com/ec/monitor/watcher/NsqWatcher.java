@@ -17,7 +17,7 @@ import java.util.*;
  * 获取集群节点状态信息。
  */
 
-public  class NsqWatcher extends  BaseWatcher{
+public  abstract class NsqWatcher extends  BaseWatcher{
 
     protected final static Logger LOG = LogManager.getLogger(NsqWatcher.class);
     private static  Map<String/**lookupURL**/, List<NsqProducerBean>> lookupurlNsqprducerMap = null;
@@ -40,7 +40,7 @@ public  class NsqWatcher extends  BaseWatcher{
     @PostConstruct
     public void start() {
 
-        LOG.info(" =====NSQ 监控 数据环境初始化=====");
+        LOG.info(" =====NSQ 监控 数据初始化开始=====");
         moduleTopicName = Constants.MOUDULE_TOPIC_NAME;
         moduleNsqdName = Constants.MOUDULE_NSQD_NAME;
         moduleChannelName = Constants.MOUDULE_CHANNEL_NAME;
@@ -56,21 +56,21 @@ public  class NsqWatcher extends  BaseWatcher{
             needMonitorTopicMap = NsqUtil.msgTopicThresholdMapping(needMonitorTopic, defaultMsgThreshold, defaulttmeoutMsgThreshold, defaultRequeueMsgThreshold);
         } catch (Exception e) {
             if (isMonitorAlltopic.equalsIgnoreCase("yes")) {
-                LOG.warn("fail to init the need of the topic config ");
+                LOG.warn("fail to init the need of the topic config information ");
             } else {
                 throw new RuntimeException("fail to init the config of the nsq topic ,the exception is :", e);
             }
         }
-       LOG.info("nsq 监控初始化数据环境完成==={\n"+"监控集群地址:"+ lookupurls
-                                                                         +"\n 监控间隔时间:"+ nsqMonitorInteval +" millseconds"
-                                                                          +"\n是否全量topic监控:"+ isMonitorAlltopic
-                                                                          +"\n 默认阻塞消息阀值:"+ defaultMsgThreshold
-                                                                          +"\n 默认超时消息阀值:"+  defaulttmeoutMsgThreshold
-                                                                          +"\n默认requeue阀值" +  defaultRequeueMsgThreshold+"\n}");
+       LOG.info("======nsq 监控初始化数据环境完成===config:{\n"+"监控集群地址:"+ lookupurls
+                                                                                                  +"\n 监控间隔时间:"+ nsqMonitorInteval +"( millseconds)"
+                                                                                                  +"\n是否全量topic监控:"+ isMonitorAlltopic
+                                                                                                  +"\n 默认阻塞消息阀值:"+ defaultMsgThreshold
+                                                                                                  +"\n 默认超时消息阀值:"+  defaulttmeoutMsgThreshold
+                                                                                                  +"\n默认requeue阀值" +  defaultRequeueMsgThreshold+"\n}");
     }
 
     public  void init() {
-        LOG.info(" 初始化数据后, 开始调用nsqd接口地址");
+        LOG.info(" =======调用远程nsq/ndes,nsqdurl/stats?format=json 接口，生成nsqd各项数据==========");
         lookupurlNsqprducerMap = NsqUtil.getNsqProducersByLOOKupUrls(lookupurls); //有多少个集群环境就发送多少次请求
         nsqdTopicInfoMap = NsqUtil.getClusterTopic(lookupurlNsqprducerMap);
         checkNsqTopicConfig();
@@ -83,6 +83,7 @@ public  class NsqWatcher extends  BaseWatcher{
 
     /**
      * 根据集群中的nsqTopicBean 生成对应的NsqChannelMonitor数据
+     * 不处理异常，直接抛到上层处理
      * @return
      */
     protected Map<String/**lookupURL**/,List<NsqChannelMonitorBean>> generateNsqChannelMonoitorData() {
@@ -98,6 +99,7 @@ public  class NsqWatcher extends  BaseWatcher{
             }
             map.put(url, nsqChannelMonitorBeans);
         }
+        LOG.info(" success generate the channel monitor data ");
         return map;
     }
 
@@ -113,11 +115,12 @@ public  class NsqWatcher extends  BaseWatcher{
             List<NsqdMonitorBean> nsqdMonitorBeans = new ArrayList<>();
             for (String nsqdUrl : topicMap.keySet()) {
                 List<NsqTopicBean> topics = topicMap.get(nsqdUrl);
-                List<NsqdMonitorBean> nsqMonitor = NsqUtil.convertNsqTopicBean2NsqdMonitorBean(topics, nsqdUrl, url);
+                List<NsqdMonitorBean> nsqMonitor = NsqUtil.convertNsqTopicBean2NsqdMonitorBean(topics, url, nsqdUrl);
                 nsqdMonitorBeans.addAll(nsqMonitor);
             }
             map.put(url, nsqdMonitorBeans);
         }
+        LOG.info("success generate the nsqd monitor data ");
         return map;
 
     }
@@ -134,12 +137,13 @@ public  class NsqWatcher extends  BaseWatcher{
             List<NsqTopicMonitorBean> topicMonitorBeans = NsqUtil.convertTopic2NsqTopicMonitorBean(url, topics);
             map.put(url, topicMonitorBeans);
         }
+        LOG.info("success generate the topic  monitor data ");
         return map;
     }
 
     @Override
     protected void generatedViewData() {
-        LOG.info("begin generate the view data ,excute by 【NsqWatcher】");
+        LOG.info("begin generate  the topic,nsqd,channle  data ,excute by 【NsqWatcher】");
         init();
         generateNsqTopicViewData();
         generateNsqdViewData();
@@ -149,19 +153,13 @@ public  class NsqWatcher extends  BaseWatcher{
     /**
      * 将生成好的monitor数据----》recordView----->入底层map 存储
      */
-    protected   void  generateNsqTopicViewData(){
+    protected  abstract void  generateNsqTopicViewData();
 
-    }
+    protected   abstract void generateNsqdViewData();
+
+    protected   abstract void generateNsqChannelViewData() ;
 
 
-
-    protected   void generateNsqdViewData(){
-
-    }
-
-    protected   void generateNsqChannelViewData() {
-
-    }
 
 
     public NsqwatcherProperties getNsqwatcherProperties() {

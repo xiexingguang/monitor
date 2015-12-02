@@ -190,4 +190,23 @@
             </plugin>
         </plugins>
     </build>
+
+    <profiles>
+        <profile> <!-- 可以通过 -P ID 来激活 -->
+            <id>PROD</id> <!-- ID 标识符 -->
+            <properties>
+                <env>product</env> <!-- properties 定义 key-value, 这里 key 是 env, value 是 PROD -->
+            </properties>
+            <activation>
+                <activeByDefault>true</activeByDefault> <!-- 默认激活 -->
+            </activation>
+        </profile>
+        <profile> <!-- 可以通过 -P ID 来激活 -->
+            <id>TEST</id> <!-- ID 标识符 -->
+            <properties>
+                <env>qa</env> <!-- properties 定义 key-value, 这里 key 是 env, value 是 TEST -->
+            </properties>
+        </profile>
+    </profiles>
+
 </project>

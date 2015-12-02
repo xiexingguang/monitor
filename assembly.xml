@@ -1,8 +1,7 @@
 <assembly
         xmlns="http://maven.apache.org/plugins/maven-assembly-plugin/assembly/1.1.2"
         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:schemaLocation="http://maven.apache.org/plugins/maven-assembly-plugin/assembly/1.1.2 http://maven.apache.org/xsd/assembly-1.1.2.xsd
-http://maven.apache.org/plugins/maven-assembly-plugin/assembly/1.1.2 ">
+        xsi:schemaLocation="http://maven.apache.org/plugins/maven-assembly-plugin/assembly/1.1.2 http://maven.apache.org/xsd/assembly-1.1.2.xsd">
     <!-- ID 标识，命名随意 -->
     <id>${project.artifactId}-assembly-${project.version}</id>
     <!-- 默认为 TRUE, 设为 FALSE, 防止将 ${project.finalName} 作为根目录打进 WAR 包 -->
@@ -22,8 +21,7 @@ http://maven.apache.org/plugins/maven-assembly-plugin/assembly/1.1.2 ">
 
         <fileSet>
             <directory>${project.basedir}/script</directory>
-            <outputDirectory>/script</outputDirectory>
-            <!-- / 表示当前项目名称目录下 即 profiledemon 目录下-->
+            <outputDirectory>/script</outputDirectory>  <!-- / 表示当前项目名称目录下 即 profiledemon 目录下-->
         </fileSet>
 
     </fileSets>

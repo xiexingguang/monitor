@@ -87,6 +87,7 @@ public class NsqRecordViewGenerateWatcher extends  NsqWatcher {
     private List<RecordView> convertNsqChannelMonoitorData2ReocrdView(List<NsqChannelMonitorBean> nsqChannelMonitorBeans) {
         Map<String/**topicName**/, NsqTopicConfig> needMonitorTopicMap = getNeedMonitorTopicMap();
         List<RecordView> recordViews = new ArrayList<RecordView>();
+
         for (int i = 0; i < nsqChannelMonitorBeans.size(); i++) {
             NsqChannelMonitorBean nsqChannelMonitorBean = nsqChannelMonitorBeans.get(i);
             String lookupurl = nsqChannelMonitorBean.getLookuphost();
@@ -103,7 +104,7 @@ public class NsqRecordViewGenerateWatcher extends  NsqWatcher {
             }else if (isMonitorAlltopic.equalsIgnoreCase("no")) {  // 通过配置决定监控哪些topic
                 config = needMonitorTopicMap.get(topicName);
                 if (config == null) { //说明topic 该topic 不在监控列表里面，则connitue
-                    LOG.info("该 topicName　【"+topicName+"】不需要监控");
+                    LOG.debug("该 topicName　【" + topicName + "】不需要监控");
                     continue;
                 }
             }
@@ -116,8 +117,8 @@ public class NsqRecordViewGenerateWatcher extends  NsqWatcher {
             int requeNum = nsqChannelMonitorBean.getRequeue_num();
             RecordView recordView = NsqUtil.generateNormalVew(lookupurl, new Date(), lookupisok);
             recordView.addItem(new ItemView(nsqdisok? DataType.ItemState.OK:DataType.ItemState.WARNING,nsqdHost));
-            recordView.addItem(new ItemView(DataType.ItemState.IGNORE,channelName));
             recordView.addItem(new ItemView(DataType.ItemState.IGNORE, topicName));
+            recordView.addItem(new ItemView(DataType.ItemState.IGNORE,channelName));
             recordView.addItem(new ItemView(DataType.ItemState.IGNORE, blockNum+""));
             recordView.addItem(new ItemView(DataType.ItemState.IGNORE,timeoutNum+""));
             recordView.addItem(new ItemView(DataType.ItemState.IGNORE,requeNum+""));
@@ -134,6 +135,7 @@ public class NsqRecordViewGenerateWatcher extends  NsqWatcher {
     private List<RecordView> convertNsqdMonitorData2RecordView(List<NsqdMonitorBean> nsqdMonitorBeanList) {
         Map<String/**topicName**/, NsqTopicConfig> needMonitorTopicMap = getNeedMonitorTopicMap();
         List<RecordView> recordViews = new ArrayList<RecordView>();
+
         for (int i = 0; i < nsqdMonitorBeanList.size(); i++) {
             NsqdMonitorBean nsqdMonitorBean = nsqdMonitorBeanList.get(i);
             String lookupurl = nsqdMonitorBean.getLookupHost();
@@ -150,7 +152,7 @@ public class NsqRecordViewGenerateWatcher extends  NsqWatcher {
             }else if (isMonitorAlltopic.equalsIgnoreCase("no")) {  // 通过配置决定监控哪些topic
                 config = needMonitorTopicMap.get(topicName);
                 if (config == null) { //说明topic 该topic 不在监控列表里面，则connitue
-                    LOG.info("该 topicName　【"+topicName+"】不需要监控");
+                    LOG.debug("该 topicName　【" + topicName + "】不需要监控");
                     continue;
                 }
             }
@@ -195,7 +197,7 @@ public class NsqRecordViewGenerateWatcher extends  NsqWatcher {
             }else if (isMonitorAlltopic.equalsIgnoreCase("no")) {  // 通过配置决定监控哪些topic
                 config = needMonitorTopicMap.get(topicName);
                 if (config == null) { //说明topic 该topic 不在监控列表里面，则connitue
-                    LOG.info("该 topicName　【"+topicName+"】不需要监控");
+                    LOG.debug("该 topicName　【"+topicName+"】不需要监控");
                     continue;
                 }
             }

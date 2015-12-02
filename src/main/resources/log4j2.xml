@@ -5,7 +5,7 @@
     </Properties>
     <Appenders>
         <Console name="CONSOLE" target="SYSTEM_OUT">
-            <PatternLayout pattern="[user-center] %d - %C.%M -%-4r [%t] %-5p  %x - %m%n" />
+            <PatternLayout pattern="[monitor] %d - %C.%M -%-4r [%t] %-5p  %x - %m%n" />
         </Console>
         
         <!-- Async Loggers will auto-flush in batches, so switch off immediateFlush. -->
@@ -18,7 +18,7 @@
             </Policies>
             <DefaultRolloverStrategy max="50" />
             <PatternLayout>
-                <Pattern>[user-center] %d - %X{msg.id} - %C.%M -%-4r [%t] %-5p %x - %m%n</Pattern>
+                <Pattern>[monitor] %d - %X{msg.id} - %C.%M -%-4r [%t] %-5p %x - %m%n</Pattern>
             </PatternLayout>
         </RollingRandomAccessFile>
         
@@ -33,36 +33,7 @@
                 <Pattern>[user-center] %d - %X{msg.id} - %C.%M -%-4r [%t] %-5p %x - %m%n</Pattern>
             </PatternLayout>
         </RollingRandomAccessFile>
-        
-        <RollingRandomAccessFile name="performance" fileName="${filePathPrefix}/performance.log" immediateFlush="false" append="true"
-            filePattern="${filePathPrefix}/$${date:yyyy-MM}/performance-%d{yyyy-MM-dd}-%i.log">
-            <Policies>
-                <TimeBasedTriggeringPolicy />
-                <SizeBasedTriggeringPolicy size="100MB" />
-            </Policies>
-            <DefaultRolloverStrategy max="50" />
-            <PatternLayout>
-                <Pattern>[user-center] %d - %X{msg.id} - %C -%-4r [%t] %-5p %x - %m%n</Pattern>
-            </PatternLayout>
-        </RollingRandomAccessFile>
-        
-        <RollingRandomAccessFile name="dataIssue" fileName="${filePathPrefix}/dataIssue.log" immediateFlush="true" append="true"
-            filePattern="${filePathPrefix}/$${date:yyyy-MM}/dataIssue-%d{yyyy-MM-dd}-%i.log">
-            <Policies>
-                <TimeBasedTriggeringPolicy />
-                <SizeBasedTriggeringPolicy size="100MB" />
-            </Policies>
-            <DefaultRolloverStrategy max="50" />
-            <PatternLayout>
-                <Pattern>[user-center] %d - %X{msg.id} - %C -%-4r [%t] %-5p %x - %m%n</Pattern>
-            </PatternLayout>
-        </RollingRandomAccessFile>
-        
-        <File name="temporary" fileName="${filePathPrefix}/temporary.log" append="true">
-	      <PatternLayout>
-	        <Pattern>[user-center] %d - %X{msg.id} - %C.%M -%-4r [%t] %-5p %x - %m%n</Pattern>
-	      </PatternLayout>
-        </File>
+
     </Appenders>
     <Loggers>
         <logger name="org.springframework" level="WARN" ></logger>
@@ -78,12 +49,7 @@
         <logger name="java.net" level="ERROR" ></logger>
         <logger name="net.sf.log4jdbc" level="ERROR" ></logger>
         <logger name="org.apache.mina" level="ERROR" ></logger>
-        <logger name="com.ec.usercenter.common.logger.PerformanceLogger" level="INFO" additivity="false">
-            <AppenderRef ref="performance" />
-        </logger>
-        <logger name="DataIssue" level="ERROR" additivity="true">
-            <AppenderRef ref="dataIssue" />
-        </logger>
+
         
         <Root level="INFO">
             <AppenderRef ref="stdout" level="DEBUG" />
