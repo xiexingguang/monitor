@@ -3,7 +3,7 @@
         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:schemaLocation="http://maven.apache.org/plugins/maven-assembly-plugin/assembly/1.1.2 http://maven.apache.org/xsd/assembly-1.1.2.xsd">
     <!-- ID 标识，命名随意 -->
-    <id>${project.artifactId}-assembly-${project.version}</id>
+    <id>distribution</id>
     <!-- 默认为 TRUE, 设为 FALSE, 防止将 ${project.finalName} 作为根目录打进 WAR 包 -->
     <!-- TRUE  结构: ${project.finalName}.war/${project.finalName}/WEB-INF -->
     <!-- FALSE 结构: ${project.finalName}.war/WEB-INF -->
